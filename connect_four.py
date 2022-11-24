@@ -337,7 +337,44 @@ def game_play(board):
         else:
             active_player = [first_player, first_player_name]
 
+def get_combos(board):
+    pass
 
+def minimax(board, depth, maximizing_player, which_player_am_i, other_player):
+    if depth == 0 or board.check_for_tie:
+        return eval(board, which_player_am_i, other_player)
+    
+    if maximizing_player:
+        best_value = -1000000
+
+        for i in range(board.width):
+            if i in board.get_valid_moves():
+                board.play_move(i, which_player_am_i)
+                copyboard = board
+                value = minimax(copyboard, depth -1, not maximizing_player, which_player_am_i, other_player)
+                best_value = min(value, best_value)
+        return best_value
+
+    else:
+        best_value = 1000000
+
+        for i in range(board.width):
+            if i in board.get_valid_moves():
+                board.play_move(i, other_player)
+                copyboard = board
+                value = minimax(copyboard, depth - 1, not maximizing_player, which_player_am_i, other_player)
+                best_value = max(value, best_value)
+        return best_value
+
+
+def eval(board, which_player_am_i, other_player):
+
+    if board.check_for_win(which_player_am_i):
+        evaluation = 1000000
+
+    elif board.check_for_win(other_player):
+        evaluation = -1000000
+    
 
 
 blue = '\U0001F535'
