@@ -1,11 +1,14 @@
 import sys
+
 sys.stdout.reconfigure(encoding='utf-8')
 
 class Board:
     white = '\U000026AA'
     blue = '\U0001F535'
     red = '\U0001F534'
-    # This allows varaible set up of the height and width of the board, and creates a list of all c-oordinates. Each co-ordinate is then 'owned' by white, or no player
+    player1_name = ''
+    player2_name = ''
+    # This allows varaible set up of the height and width of the board, and creates a list of all co-ordinates. Each co-ordinate is then 'owned' by white, or no player
     #The co-ordinates of the board mimic the co-ordinates of a computer screen, not graph paper, i.e. top left is 0,0 and it increase left to right, top to bottom
     # The top left co-ordiante (0,0) is added first and is indexed at 0
     # Then the next top row (0, 1) is added and indexed at 1
@@ -30,6 +33,9 @@ class Board:
         self.width = width
         self.height = height
         self.coords = []
+        self.numbers_of_moves = 0
+        self.number_of_max_moves = self.width * self.height
+
         # Need a list of co-ords for easy checking. This is stored as a list of indices to quickly run through to find if a move is winning
         # left_to_right is a list of indices of the top row and left most column. This is needed for any diagonal where the x and y axis are positively linked
         # right_to_left is a list of indices of the top row and right most column. This is needed for any diagonal where the x and y axis are negatively linked
@@ -58,7 +64,6 @@ class Board:
                     if self.coords.index(list_item) not in self.indicies_to_check_right_to_left:
                         self.indicies_to_check_right_to_left.append(self.coords.index(list_item))
 
-    
     def __repr__(self):
         # Simplest way to visualize the class
         return str(self.coords)
@@ -74,7 +79,6 @@ class Board:
             else:
                 print(coord[2], end= '')
 
-
     def get_valid_moves(self):
         # If the column has the top row available, then you must be able to place at least one toekn in that column
         valid_columns = []
@@ -87,26 +91,24 @@ class Board:
         
     def play_move(self, selection, player):
         # Check to ensure the move is legal, and then find the lowest possible row it can belong, and change the owner of that tile from neutral to a colour
-        if selection in self.get_valid_moves():
-            coord_to_change = [selection]
+        while selection not in self.get_valid_moves():
+            print("That is not a valid choice. Please choose again.")
+            str_selection = input("Please enter the column you wish to play: ")
+            selection = int(str_selection)
 
-            for i in range(selection, self.width*self.height, self.width):
+        coord_to_change = [selection]
 
-                if self.coords[i][2] is self.white:
-                    coord_to_change = self.coords[i]
+        for i in range(selection, self.width*self.height, self.width):
 
-            i = self.coords.index(coord_to_change)
-            self.coords[i][2] = player
+            if self.coords[i][2] is self.white:
+                coord_to_change = self.coords[i]
 
-        # If that isn't a valid choice, let the player know
-        else:
-            print("Please choose a different column")
-        
-        # Check for a win after every move
-        if self.check_for_win(player) is True:
-            print(player + " is a winner")
+        i = self.coords.index(coord_to_change)
+        self.coords[i][2] = player
+        self.numbers_of_moves += 1
     
     def check_for_win(self, player):
+
         # Check horizontal win
         # Start at the top left of the board, and work across the row. If there is at least 4 in a row, that player wins
         # If no winner, move down a row, and start over.
@@ -161,7 +163,6 @@ class Board:
         # Run through list of all possible diagonals starting indices
         for i in self.indicies_to_check_left_to_right:
             count = 0
-
             # Run through each diagonal up to height. This ensures we cover every diagonal, but this could end up in overflow, so we need to make sure the index is within bounds
             for j in range(self.height):
                 index  = i + (j * (self.width + 1))
@@ -178,6 +179,10 @@ class Board:
                             if count == 4:
                                 return True
 
+                            else:
+                                count = 0
+                                break
+
                         else:
                             count = 0
                             break
@@ -191,12 +196,17 @@ class Board:
                             if count == 4:
                                 return True
 
+                            else:
+                                count = 0
+                                break
+
                         else:
                             count = 0
                             break
 
                     # If the coordinate is not the bottom row or right column, just continue checking like normal
                     else:
+
                         if self.coords[index][2] is player:
                             count +=1
 
@@ -236,6 +246,10 @@ class Board:
 
                             if count == 4:
                                 return True
+                            
+                            else:
+                                count = 0
+                                break
 
                         else:
                             count = 0
@@ -249,6 +263,10 @@ class Board:
 
                             if count == 4:
                                 return True
+                            
+                            else:
+                                count = 0
+                                break
 
                         else:
                             count = 0
@@ -265,8 +283,67 @@ class Board:
                         else:
                             count = 0
 
+    def check_for_tie(self):
+        if self.numbers_of_moves == self.number_of_max_moves:
+            return True
+
+    def reset_board(self):
+        self.coords.clear()
+        for row in range(self.height):
+
+            for column in range(self.width):
+                list_item = [row, column, self.white]
+                self.coords.append(list_item)
+
+def main_screen(board):
+    print("Welcome to Connect 4!")
+    board.player1_name = input("Please enter your name: ")
+    print("Please choose if you want to play against AI (1) or another person (2)")
+    player = input("Enter selection: ")
+    while (player != '1' and player != '2'):
+        print("You did not enter in a valid selection. Please try again.")
+        player = input("Enter selection: ")
+    if player == '1':
+        board.player2_name = "The AI"
+    else:
+        board.player2_name = input("Please enter the name of the second player: ")
+        
+    print("{name1} has chosen to play against {name2}!".format(name1 = board.player1_name, name2 = board.player2_name))
+
+def game_play(board):
+    first_player = board.blue
+    first_player_name = board.player1_name
+    second_player = board.red
+    second_player_name = board.player2_name
+    active_player = [first_player, first_player_name]
+    game_over = False
+    board.print_board()
+    while not game_over:
+        print("It is your move {current}".format(current = active_player[1]))
+        print("Valid moves are {moves}".format(moves = board.get_valid_moves()))
+        str_move = input("Please enter the column you wish to play: ")
+        move = int(str_move)
+        board.play_move(move, active_player[0])
+        board.print_board()
+        if board.check_for_win(active_player[0]):
+            game_over = True
+            print("CONGRATULATIONS {player}. YOU WON!".format(player = active_player[1]))
+        if board.check_for_tie():
+            game_over = True
+            print("It's a tie!")
+            
+        if active_player == [first_player, first_player_name]:
+            active_player = [second_player, second_player_name]
+        else:
+            active_player = [first_player, first_player_name]
+
+
+
 
 blue = '\U0001F535'
 red = '\U0001F534'
+
 board = Board()
-board.print_board()
+main_screen(board)
+game_play(board)
+
