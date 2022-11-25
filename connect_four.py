@@ -1,4 +1,7 @@
 import sys
+import copy
+import math
+import random
 
 sys.stdout.reconfigure(encoding='utf-8')
 
@@ -321,9 +324,31 @@ def game_play(board):
     while not game_over:
         print("It is your move {current}".format(current = active_player[1]))
         print("Valid moves are {moves}".format(moves = board.get_valid_moves()))
-        str_move = input("Please enter the column you wish to play: ")
-        move = int(str_move)
-        board.play_move(move, active_player[0])
+
+        if active_player[1] == "The AI":
+            best_move = random.choice(board.get_valid_moves())
+            best_score = (-math.inf)
+            for i in range(board.width):
+                if i in board.get_valid_moves():
+                    copyboard = copy.deepcopy(board)
+                    copyboard.play_move(i, active_player[0])
+                    score = minimax(copyboard, 4, False, board.red, board.blue)
+                    if i == 3:
+                        score += 3
+                    if i == 2 or 4:
+                        score += 2
+                    if i == 1 or 5:
+                        score += 1
+                    print("Score for column {i} is {score}".format(i = i, score = score))
+                    if score > best_score:
+                        best_move = i
+                        best_score = score
+            board.play_move(best_move, active_player[0])
+
+        else:
+            str_move = input("Please enter the column you wish to play: ")
+            move = int(str_move)
+            board.play_move(move, active_player[0])
         board.print_board()
         if board.check_for_win(active_player[0]):
             game_over = True
@@ -337,44 +362,211 @@ def game_play(board):
         else:
             active_player = [first_player, first_player_name]
 
-def get_combos(board):
-    pass
 
 def minimax(board, depth, maximizing_player, which_player_am_i, other_player):
-    if depth == 0 or board.check_for_tie:
+    if depth == 0:
         return eval(board, which_player_am_i, other_player)
     
     if maximizing_player:
-        best_value = -1000000
+        best_value = (-math.inf)
 
         for i in range(board.width):
             if i in board.get_valid_moves():
-                board.play_move(i, which_player_am_i)
-                copyboard = board
-                value = minimax(copyboard, depth -1, not maximizing_player, which_player_am_i, other_player)
-                best_value = min(value, best_value)
-        return best_value
-
-    else:
-        best_value = 1000000
-
-        for i in range(board.width):
-            if i in board.get_valid_moves():
-                board.play_move(i, other_player)
-                copyboard = board
-                value = minimax(copyboard, depth - 1, not maximizing_player, which_player_am_i, other_player)
+                copyboard = copy.deepcopy(board)
+                copyboard.play_move(i, which_player_am_i)
+                value = minimax(copyboard, depth-1, False, which_player_am_i, other_player)
                 best_value = max(value, best_value)
         return best_value
 
+    else:
+        best_value = math.inf
+
+        for i in range(board.width):
+            if i in board.get_valid_moves():
+                copyboard = copy.deepcopy(board)
+                copyboard.play_move(i, other_player)
+                value = minimax(copyboard, depth-1, True, which_player_am_i, other_player)
+                best_value = min(value, best_value)
+        return best_value
+
+def get_count(board, player):
+    list_of_counts = []
+    for i in range(board.height): # 0 to 5
+        count = 0
+
+        for j in range(board.width): # 0 to 6
+            index = (i * board.width) + j
+
+            if board.coords[index][2] is player:
+                count += 1
+
+                if count == 4:
+                    list_of_counts.append(1000)
+
+            else:
+                list_of_counts.append(count)
+                count = 0
+
+    for i in range(board.width): # 0 to 6
+        count = 0
+
+        for j in range(board.height): # 0 to 5
+            index = (j * board.width) + i
+
+            if board.coords[index][2] is player:
+                count += 1
+
+                if count == 4:
+                    list_of_counts.append(1000)
+
+            else:
+                list_of_counts.append(count)
+                count = 0
+
+    # Run through list of all possible diagonals starting indices
+    for i in board.indicies_to_check_left_to_right:
+        count = 0
+        # Run through each diagonal up to height. This ensures we cover every diagonal, but this could end up in overflow, so we need to make sure the index is within bounds
+        for j in range(board.height):
+            index  = i + (j * (board.width + 1))
+
+            # Ensure the index is in bounds
+            if index <= len(board.coords)-1:
+
+                # Check to see if the coordinate we are checking is on the bottom row. If it is, check if there is a winner. If there is no winner, stop trying to look as there can't be anything below this row
+                if board.coords[index][0] is (board.height-1):
+
+                    if board.coords[index][2] is player:
+                        count +=1
+
+                        if count == 4:
+                            list_of_counts.append(1000)
+
+                        else:
+                            list_of_counts.append(count)
+                            count = 0
+                            break
+
+                    else:
+                        list_of_counts.append(count)
+                        count = 0
+                        break
+
+                # Check to see if the coordinate we are checking is on the right most column. If it is, check if there is a winner. If there is no winner, stop trying to look as there can't be anything to the right of this column
+                if board.coords[index][1] is (board.width-1):
+
+                    if board.coords[index][2] is player:
+                        count +=1
+
+                        if count == 4:
+                            list_of_counts.append(1000)
+
+                        else:
+                            list_of_counts.append(count)
+                            count = 0
+                            break
+
+                    else:
+                        list_of_counts.append(count)
+                        count = 0
+                        break
+
+                # If the coordinate is not the bottom row or right column, just continue checking like normal
+                else:
+
+                    if board.coords[index][2] is player:
+                        count +=1
+
+                        if count == 4:
+                            list_of_counts.append(1000)
+
+                    else:
+                        list_of_counts.append(count)
+                        count = 0
+
+    # Run through list of all possible diagonals starting indices
+    for i in board.indicies_to_check_right_to_left:
+        count = 0
+
+        # Run through each diagonal up to height. This ensures we cover every diagonal, but this could end up in overflow, so we need to make sure the index is within bounds
+        for j in range(board.height):
+            index  = i + (j*(board.width-1))
+
+            # Ensure the index is in bounds
+            if index <= len(board.coords)-1:
+
+                # Check to see if the coordinate we are checking is on the bottom row. If it is, check if there is a winner. If there is no winner, stop trying to look as there can't be anything below this row
+                if board.coords[index][0] is (board.height-1):
+
+                    if board.coords[index][2] is player:
+                        count +=1
+
+                        if count == 4:
+                            list_of_counts.append(1000)
+                            
+                        else:
+                            list_of_counts.append(count)
+                            count = 0
+                            break
+
+                    else:
+                        list_of_counts.append(count)
+                        count = 0
+                        break
+
+                # Check to see if the coordinate we are checking is on the left most column. If it is, check if there is a winner. If there is no winner, stop trying to look as there can't be anything to the left of this column
+                if board.coords[index][1] is (0):
+
+                    if board.coords[index][2] is player:
+                        count +=1
+
+                        if count == 4:
+                            list_of_counts.append(1000)
+                            
+                        else:
+                            count = 0
+                            break
+
+                    else:
+                        count = 0
+                        break
+
+                # If the coordinate is not the bottom row or right column, just continue checking like normal
+                else:
+                    if board.coords[index][2] is player:
+                        count +=1
+
+                        if count == 4:
+                            list_of_counts.append(1000)
+
+                    else:
+                        list_of_counts.append(count)
+                        count = 0
+
+    return list_of_counts
 
 def eval(board, which_player_am_i, other_player):
+    evaluation = 0
 
     if board.check_for_win(which_player_am_i):
-        evaluation = 1000000
+        evaluation = math.inf
 
-    elif board.check_for_win(other_player):
-        evaluation = -1000000
+    if board.check_for_win(other_player):
+        evaluation = (-math.inf)
     
+    else:
+        which_player_am_i_counts = get_count(board, which_player_am_i)
+        other_player_counts = get_count(board, other_player)
+        which_player_am_i_total = 0
+        other_player_total = 0
+        for item in which_player_am_i_counts:
+            which_player_am_i_total += item*item
+        for item in other_player_counts:
+            other_player_total += item*item
+        
+        evaluation = which_player_am_i_total - other_player_total
+    
+    return evaluation
 
 
 blue = '\U0001F535'
