@@ -11,6 +11,7 @@ class Board:
     red = '\U0001F534'
     player1_name = ''
     player2_name = ''
+    first_player = 0
     # This allows varaible set up of the height and width of the board, and creates a list of all co-ordinates. Each co-ordinate is then 'owned' by white, or no player
     #The co-ordinates of the board mimic the co-ordinates of a computer screen, not graph paper, i.e. top left is 0,0 and it increase left to right, top to bottom
     # The top left co-ordiante (0,0) is added first and is indexed at 0
@@ -312,15 +313,31 @@ def main_screen(board):
         board.player2_name = input("Please enter the name of the second player: ")
         
     print("{name1} has chosen to play against {name2}!".format(name1 = board.player1_name, name2 = board.player2_name))
+    board.first_player = input("Do you want to go first (1) or second (2): ")
+    if board.first_player == '2':
+        tmp = board.player2_name
+        board.player2_name = board.player1_name
+        board.player1_name = tmp
+
 
 def game_play(board):
-    first_player = board.blue
+    first_player = board.red
     first_player_name = board.player1_name
-    second_player = board.red
+    second_player = board.blue
     second_player_name = board.player2_name
     active_player = [first_player, first_player_name]
+    
+    if board.first_player == '2':
+        AI_color = board.red
+        player_color = board.blue
+
+    else:
+        AI_color = board.blue
+        player_color = board.red
+    
     game_over = False
     board.print_board()
+
     while not game_over:
         print("It is your move {current}".format(current = active_player[1]))
         print("Valid moves are {moves}".format(moves = board.get_valid_moves()))
@@ -328,37 +345,49 @@ def game_play(board):
         if active_player[1] == "The AI":
             best_move = random.choice(board.get_valid_moves())
             best_score = (-math.inf)
+
             for i in range(board.width):
+
                 if i in board.get_valid_moves():
                     copyboard = copy.deepcopy(board)
                     copyboard.play_move(i, active_player[0])
-                    score = minimax(copyboard, 4, False, board.red, board.blue)
+                    score = minimax(copyboard, 4, False, AI_color, player_color)
+
                     if i == 3:
+                        score += 7
+
+                    elif i == 2 or 1 == 4:
                         score += 3
-                    if i == 2 or 4:
-                        score += 2
-                    if i == 1 or 5:
+
+                    elif i == 1 or i == 5:
                         score += 1
+
                     print("Score for column {i} is {score}".format(i = i, score = score))
+
                     if score > best_score:
                         best_move = i
                         best_score = score
+
             board.play_move(best_move, active_player[0])
 
         else:
             str_move = input("Please enter the column you wish to play: ")
             move = int(str_move)
             board.play_move(move, active_player[0])
+
         board.print_board()
+
         if board.check_for_win(active_player[0]):
             game_over = True
             print("CONGRATULATIONS {player}. YOU WON!".format(player = active_player[1]))
+
         if board.check_for_tie():
             game_over = True
             print("It's a tie!")
             
         if active_player == [first_player, first_player_name]:
             active_player = [second_player, second_player_name]
+
         else:
             active_player = [first_player, first_player_name]
 
@@ -371,40 +400,50 @@ def minimax(board, depth, maximizing_player, which_player_am_i, other_player):
         best_value = (-math.inf)
 
         for i in range(board.width):
+
             if i in board.get_valid_moves():
+
                 copyboard = copy.deepcopy(board)
                 copyboard.play_move(i, which_player_am_i)
                 value = minimax(copyboard, depth-1, False, which_player_am_i, other_player)
                 best_value = max(value, best_value)
+
         return best_value
 
     else:
         best_value = math.inf
 
         for i in range(board.width):
+
             if i in board.get_valid_moves():
                 copyboard = copy.deepcopy(board)
                 copyboard.play_move(i, other_player)
                 value = minimax(copyboard, depth-1, True, which_player_am_i, other_player)
                 best_value = min(value, best_value)
+
         return best_value
 
 def get_count(board, player):
     list_of_counts = []
+
     for i in range(board.height): # 0 to 5
         count = 0
 
         for j in range(board.width): # 0 to 6
             index = (i * board.width) + j
 
+            if index < board.height:
+                count -= 1
+
             if board.coords[index][2] is player:
                 count += 1
 
-                if count == 4:
+                if count >= 4:
                     list_of_counts.append(1000)
 
             else:
-                list_of_counts.append(count)
+                if count > 0:
+                    list_of_counts.append(count)
                 count = 0
 
     for i in range(board.width): # 0 to 6
@@ -416,16 +455,18 @@ def get_count(board, player):
             if board.coords[index][2] is player:
                 count += 1
 
-                if count == 4:
+                if count >= 4:
                     list_of_counts.append(1000)
 
             else:
-                list_of_counts.append(count)
+                if count > 0:
+                    list_of_counts.append(count)
                 count = 0
 
     # Run through list of all possible diagonals starting indices
     for i in board.indicies_to_check_left_to_right:
         count = 0
+
         # Run through each diagonal up to height. This ensures we cover every diagonal, but this could end up in overflow, so we need to make sure the index is within bounds
         for j in range(board.height):
             index  = i + (j * (board.width + 1))
@@ -439,16 +480,16 @@ def get_count(board, player):
                     if board.coords[index][2] is player:
                         count +=1
 
-                        if count == 4:
+                        if count >= 4:
                             list_of_counts.append(1000)
 
                         else:
-                            list_of_counts.append(count)
+                            if count > 0:
+                                list_of_counts.append(count)
                             count = 0
                             break
 
                     else:
-                        list_of_counts.append(count)
                         count = 0
                         break
 
@@ -458,16 +499,16 @@ def get_count(board, player):
                     if board.coords[index][2] is player:
                         count +=1
 
-                        if count == 4:
+                        if count >= 4:
                             list_of_counts.append(1000)
 
                         else:
-                            list_of_counts.append(count)
+                            if count > 0:
+                                list_of_counts.append(count)
                             count = 0
                             break
 
                     else:
-                        list_of_counts.append(count)
                         count = 0
                         break
 
@@ -477,11 +518,12 @@ def get_count(board, player):
                     if board.coords[index][2] is player:
                         count +=1
 
-                        if count == 4:
+                        if count >= 4:
                             list_of_counts.append(1000)
 
                     else:
-                        list_of_counts.append(count)
+                        if count > 0:
+                            list_of_counts.append(count)
                         count = 0
 
     # Run through list of all possible diagonals starting indices
@@ -501,16 +543,16 @@ def get_count(board, player):
                     if board.coords[index][2] is player:
                         count +=1
 
-                        if count == 4:
+                        if count >= 4:
                             list_of_counts.append(1000)
-                            
+
                         else:
-                            list_of_counts.append(count)
+                            if count > 0:
+                                list_of_counts.append(count)
                             count = 0
                             break
 
                     else:
-                        list_of_counts.append(count)
                         count = 0
                         break
 
@@ -520,10 +562,12 @@ def get_count(board, player):
                     if board.coords[index][2] is player:
                         count +=1
 
-                        if count == 4:
+                        if count >= 4:
                             list_of_counts.append(1000)
-                            
+
                         else:
+                            if count > 0:
+                                list_of_counts.append(count)
                             count = 0
                             break
 
@@ -536,11 +580,12 @@ def get_count(board, player):
                     if board.coords[index][2] is player:
                         count +=1
 
-                        if count == 4:
+                        if count >= 4:
                             list_of_counts.append(1000)
 
                     else:
-                        list_of_counts.append(count)
+                        if count > 0:
+                            list_of_counts.append(count)
                         count = 0
 
     return list_of_counts
@@ -548,21 +593,23 @@ def get_count(board, player):
 def eval(board, which_player_am_i, other_player):
     evaluation = 0
 
-    if board.check_for_win(which_player_am_i):
-        evaluation = math.inf
-
     if board.check_for_win(other_player):
         evaluation = (-math.inf)
+
+    elif board.check_for_win(which_player_am_i):
+        evaluation = math.inf
     
     else:
         which_player_am_i_counts = get_count(board, which_player_am_i)
         other_player_counts = get_count(board, other_player)
         which_player_am_i_total = 0
         other_player_total = 0
+
         for item in which_player_am_i_counts:
             which_player_am_i_total += item*item
+
         for item in other_player_counts:
-            other_player_total += item*item
+            other_player_total += item*item*2
         
         evaluation = which_player_am_i_total - other_player_total
     
